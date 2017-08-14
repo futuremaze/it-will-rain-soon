@@ -11,6 +11,7 @@ YOLP(気象情報):
 """
 
 from datetime import datetime
+from datetime import timedelta
 import json
 import os
 import requests
@@ -63,21 +64,22 @@ def get_weather_information(settings):
 
     appid = settings.get('yolp', 'appid')
     coordinates = settings.get('yolp', 'coordinates')
-    date = datetime.now().strftime('%Y%m%d%H%M')
+    date_now = datetime.now().strftime('%Y%m%d%H%M')
 
     url = \
         "https://map.yahooapis.jp/weather/V1/place?" \
         "appid={appid}&" \
         "coordinates={coordinates}&" \
         "output=json&" \
-        "date={date}&" \
+        "date_now={date_now}&" \
         "past=0&" \
-        "interval=10".format(appid=appid, coordinates=coordinates, date=date)
+        "interval=10".format(
+            appid=appid, coordinates=coordinates, date_now=date_now)
 
     weather_json = requests.get(url).json()
 
     output_json_file = open(
-        settings.get('yolp', 'download_dir') + "/%s.json" % date, 'w')
+        settings.get('yolp', 'download_dir') + "/%s.json" % date_now, 'w')
     json.dump(
         weather_json,
         output_json_file,
@@ -96,6 +98,28 @@ def parse_weather_information(weather_information_json, settings):
     weather_information_json -- YOLP(気象情報)のデータ(辞書オブジェクト)
     settings -- 設定値(ConfigParserオブジェクト)
     """
+    date_now = datetime.now()
+    after_minutes = int(settings.get('weather', 'after_minutes'))
+    target_time = date_now + timedelta(minutes=after_minutes)
+    rainfall_threshold = float(settings.get('weather', 'rainfall_threshold'))
+    weather_list = \
+        weather_information_json["Feature"][0]["Property"]["WeatherList"]
+
+    for weather in weather_list["Weather"]:
+        date = datetime.strptime(weather["Date"], '%Y%m%d%H%M')
+
+        if date >= target_time:
+            rainfall = float(weather["Rainfall"])
+            if rainfall >= rainfall_threshold:
+                # playback sound.
+                print(
+                    "Rainfall(rainfall={rainfall})".format(rainfall=rainfall))
+            else:
+                print("Not Rainfall(rainfall={rainfall})".format(
+                    rainfall=rainfall))
+            return 0
+
+    return 1
 
 
 if __name__ == '__main__':
@@ -104,4 +128,5 @@ if __name__ == '__main__':
     # YOLP(気象情報呼び出し)
     # 気象情報解析
     settings = load_setting_file("./tests/data/settings_normal.ini")
-    json = get_weather_information(settings)
+    weather_json = get_weather_information(settings)
+    parse_weather_information(weather_json, settings)
