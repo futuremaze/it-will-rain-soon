@@ -111,15 +111,24 @@ def parse_weather_information(weather_information_json, settings):
         if date >= target_time:
             rainfall = float(weather["Rainfall"])
             if rainfall >= rainfall_threshold:
-                # playback sound.
-                print(
-                    "Rainfall(rainfall={rainfall})".format(rainfall=rainfall))
-            else:
-                print("Not Rainfall(rainfall={rainfall})".format(
-                    rainfall=rainfall))
-            return 0
+                if os.access('./.raining', os.F_OK):
+                    print("It is raining now.")
+                    return 2
+                else:
+                    # playback sound.
+                    print(
+                        "Rainfall(rainfall={rainfall})".format(
+                            rainfall=rainfall))
+                    open('./.raining', 'w').close()
+                    return 1
+            break
 
-    return 1
+    print("Not Rainfall")
+
+    if os.access('./.raining', os.F_OK):
+        os.remove('./.raining')
+
+    return 0
 
 
 if __name__ == '__main__':
