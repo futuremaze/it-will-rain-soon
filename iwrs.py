@@ -135,13 +135,13 @@ def parse_weather_information(weather_information_json, settings):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
                 prog=__file__,
-                usage="python3 {} -f config.ini".format(__file__)
+                usage="python3 {} -f config.ini".format(__file__),
                 add_help=True
                 )
     parser.add_argument(
         '-f',
         '--conf',
-        required=True
+        required=True,
         help='config file'
         )
 
