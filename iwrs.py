@@ -12,6 +12,7 @@ YOLP(気象情報):
 
 from datetime import datetime
 from datetime import timedelta
+import argparse
 import json
 import os
 import requests
@@ -132,10 +133,25 @@ def parse_weather_information(weather_information_json, settings):
 
 
 if __name__ == '__main__':
-    # TODO 引数処理
+    parser = argparse.ArgumentParser(
+                prog=__file__,
+                usage="python3 {} -f config.ini".format(__file__)
+                add_help=True
+                )
+    parser.add_argument(
+        '-f',
+        '--conf',
+        required=True
+        help='config file'
+        )
+
+    args = parser.parse_args()
+
     # 設定ファイル読み込み
+    settings = load_setting_file(args.conf)
+
     # YOLP(気象情報呼び出し)
-    # 気象情報解析
-    settings = load_setting_file("./tests/data/settings_normal.ini")
     weather_json = get_weather_information(settings)
+
+    # 気象情報解析
     parse_weather_information(weather_json, settings)
