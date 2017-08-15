@@ -1,0 +1,63 @@
+{
+    "ResultInfo": {
+        "Count": 1,
+        "Total": 1,
+        "Start": 1,
+        "Status": 200,
+        "Latency": 0.004094,
+        "Description": "",
+        "Copyright": "(C) Yahoo Japan Corporation."
+    },
+    "Feature": [
+        {
+            "Id": "190001010000_0.00000_0.00000",
+            "Name": "地点(0.00000,0.00000)の1900年01月01日 00時00分から60分間の天気情報",
+            "Geometry": {
+                "Type": "point",
+                "Coordinates": "0.00000,0.00000"
+            },
+            "Property": {
+                "WeatherAreaCode": 0,
+                "WeatherList": {
+                    "Weather": [
+                        {
+                            "Type": "observation",
+                            "Date": "190001010000",
+                            "Rainfall": 0.0
+                        },
+                        {
+                            "Type": "forecast",
+                            "Date": "190001010010",
+                            "Rainfall": 0.0
+                        },
+                        {
+                            "Type": "forecast",
+                            "Date": "190001010020",
+                            "Rainfall": 0.0
+                        },
+                        {
+                            "Type": "forecast",
+                            "Date": "190001010030",
+                            "Rainfall": 0.0
+                        },
+                        {
+                            "Type": "forecast",
+                            "Date": "190001010040",
+                            "Rainfall": 0.0
+                        },
+                        {
+                            "Type": "forecast",
+                            "Date": "190001010050",
+                            "Rainfall": 0.0
+                        },
+                        {
+                            "Type": "forecast",
+                            "Date": "190001010100",
+                            "Rainfall": 0.0
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
