@@ -103,6 +103,7 @@ def parse_weather_information(weather_information_json, settings):
     after_minutes = int(settings.get('weather', 'after_minutes'))
     target_time = date_now + timedelta(minutes=after_minutes)
     rainfall_threshold = float(settings.get('weather', 'rainfall_threshold'))
+    message = settings.get('audio', 'message')
     weather_list = \
         weather_information_json["Feature"][0]["Property"]["WeatherList"]
 
@@ -117,9 +118,7 @@ def parse_weather_information(weather_information_json, settings):
                     return 2
                 else:
                     # playback sound.
-                    print(
-                        "Rainfall(rainfall={rainfall})".format(
-                            rainfall=rainfall))
+                    print("{}\n".format(message))
                     open('./.raining', 'w').close()
                     return 1
             break
