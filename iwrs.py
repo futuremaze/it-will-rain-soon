@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import requests
+import time
 import configparser
 
 
@@ -79,14 +80,14 @@ def get_weather_information(settings):
 
     weather_json = requests.get(url).json()
 
-    output_json_file = open(
-        settings.get('yolp', 'download_dir') + "/%s.json" % date_now, 'w')
-    json.dump(
-        weather_json,
-        output_json_file,
-        indent=4, separators=(',', ': '), ensure_ascii=False)
-
-    output_json_file.close
+#     output_json_file = open(
+#         settings.get('yolp', 'download_dir') + "/%s.json" % date_now, 'w')
+#     json.dump(
+#         weather_json,
+#         output_json_file,
+#         indent=4, separators=(',', ': '), ensure_ascii=False)
+# 
+#     output_json_file.close
 
     return weather_json
 
@@ -104,6 +105,7 @@ def parse_weather_information(weather_information_json, settings):
     target_time = date_now + timedelta(minutes=after_minutes)
     rainfall_threshold = float(settings.get('weather', 'rainfall_threshold'))
     message = settings.get('audio', 'message')
+    repeat = int(settings.get('audio', 'repeat'))
     weather_list = \
         weather_information_json["Feature"][0]["Property"]["WeatherList"]
 
@@ -114,16 +116,22 @@ def parse_weather_information(weather_information_json, settings):
             rainfall = float(weather["Rainfall"])
             if rainfall >= rainfall_threshold:
                 if os.access('./.raining', os.F_OK):
-                    print("It is raining now.")
+                    # print("It is raining now.")
                     return 2
                 else:
                     # playback sound.
-                    print("{}\n".format(message))
+                    # print("{}\n".format(message))
+                    for var in range(0, repeat):
+                        os.system('/opt/aquestalkpi/AquesTalkPi -b "{}" | aplay'.format(
+                            message))
+                        time.sleep(5)
+
                     open('./.raining', 'w').close()
                     return 1
             break
 
-    print("Not Rainfall")
+    # print("Not Rainfall")
+    # os.system('/opt/aquestalkpi/AquesTalkPi "この先、しばらく雨は降らないよ" | aplay')
 
     if os.access('./.raining', os.F_OK):
         os.remove('./.raining')
