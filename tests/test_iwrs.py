@@ -25,13 +25,8 @@ def test_load_setting_file():
     download_dir = settings.get('yolp', 'download_dir')
     assert os.access(download_dir, os.W_OK)
 
-    after_minutes = int(settings.get('weather', 'after_minutes'))
-    assert after_minutes > 0
-
-    rainfall_threshold = float(settings.get('weather', 'rainfall_threshold'))
-    assert rainfall_threshold > 0.0
-
-    assert settings.get('audio', 'audio_file')
+    assert settings.get('audio', 'message')
+    assert settings.get('audio', 'repeat')
 
     # 存在しない設定ファイルパス
     with pytest.raises(OSError):
@@ -40,31 +35,6 @@ def test_load_setting_file():
     with pytest.raises(ValueError):
         iwrs.load_setting_file(
             "./tests/data/settings_cant_write_download_dir.ini")
-
-    settings = iwrs.load_setting_file(
-        "./tests/data/settings_after_minutes_eq_0.ini")
-    after_minutes = int(settings.get('weather', 'after_minutes'))
-    assert after_minutes == 0
-
-    with pytest.raises(ValueError):
-        iwrs.load_setting_file("./tests/data/settings_after_minutes_lt_0.ini")
-
-    settings = iwrs.load_setting_file(
-        "./tests/data/settings_after_minutes_eq_60.ini")
-    after_minutes = int(settings.get('weather', 'after_minutes'))
-    assert after_minutes == 60
-
-    with pytest.raises(ValueError):
-        iwrs.load_setting_file("./tests/data/settings_after_minutes_gt_60.ini")
-
-    settings = iwrs.load_setting_file(
-        "./tests/data/settings_rainfall_threshold_eq_0.ini")
-    rainfall_threshold = float(settings.get('weather', 'rainfall_threshold'))
-    assert rainfall_threshold == 0
-
-    with pytest.raises(ValueError):
-        iwrs.load_setting_file(
-            "./tests/data/settings_rainfall_threshold_lt_0.ini")
 
 
 def test_get_weather_information():
@@ -87,7 +57,28 @@ def test_parse_weather_information():
     if os.access('./.raining', os.F_OK):
         os.remove('./.raining')
 
-    f = open('./tests/data/yolp_will_rain.json', 'r')
+    f = open('./tests/data/yolp_will_rain_1.json', 'r')
+    weather_json = json.load(f)
+    f.close()
+
+    date_at = datetime.now() + timedelta(minutes=1)
+    weather_list = \
+        weather_json["Feature"][0]["Property"]["WeatherList"]
+
+    for weather in weather_list["Weather"]:
+        weather["Date"] = date_at.strftime("%Y%m%d%H%M")
+        date_at = date_at + timedelta(minutes=10)
+
+    assert iwrs.parse_weather_information(weather_json, settings) == 1
+    assert os.access('./.raining', os.F_OK)
+
+    assert iwrs.parse_weather_information(weather_json, settings) == 2
+    assert os.access('./.raining', os.F_OK)
+
+    if os.access('./.raining', os.F_OK):
+        os.remove('./.raining')
+
+    f = open('./tests/data/yolp_will_rain_2.json', 'r')
     weather_json = json.load(f)
     f.close()
 
