@@ -10,21 +10,18 @@ from datetime import timedelta
 import json
 import os
 import pytest
-import iwrs
+from iwrs import ItWillRainSoon
 
 
 def test_load_setting_file():
     """ [FUNCTIONS] iwrs.load_setting_file テストコード
     """
+    iwrs = ItWillRainSoon()
+
     # 通常の設定ファイル
     settings = iwrs.load_setting_file("./tests/data/settings_normal.ini")
     assert settings.get('yolp', 'appid')
-
     assert settings.get('yolp', 'coordinates')
-
-    download_dir = settings.get('yolp', 'download_dir')
-    assert os.access(download_dir, os.W_OK)
-
     assert settings.get('audio', 'message')
     assert settings.get('audio', 'repeat')
 
@@ -32,24 +29,19 @@ def test_load_setting_file():
     with pytest.raises(OSError):
         iwrs.load_setting_file("")
 
-    with pytest.raises(ValueError):
-        iwrs.load_setting_file(
-            "./tests/data/settings_cant_write_download_dir.ini")
-
 
 def test_get_weather_information():
+    iwrs = ItWillRainSoon()
     settings = iwrs.load_setting_file("./tests/data/settings_normal.ini")
     settings.set('yolp', 'appid', os.environ["YOLP_APPID"])
     settings.set('yolp', 'coordinates', os.environ["YOLP_COORDINATES"])
 
-    date = datetime.now().strftime('%Y%m%d%H%M')
     weather_json = iwrs.get_weather_information(settings)
     assert weather_json["ResultInfo"]["Status"] == 200
-    assert os.access(
-        settings.get('yolp', 'download_dir') + "/%s.json" % date, os.F_OK)
 
 
 def test_parse_weather_information():
+    iwrs = ItWillRainSoon()
     settings = iwrs.load_setting_file("./tests/data/settings_normal.ini")
     settings.set('yolp', 'appid', os.environ["YOLP_APPID"])
     settings.set('yolp', 'coordinates', os.environ["YOLP_COORDINATES"])

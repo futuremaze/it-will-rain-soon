@@ -13,113 +13,159 @@ YOLP(気象情報):
 from datetime import datetime
 import argparse
 import json
+import logging
+import logging.config
 import os
 import requests
 import time
 import configparser
 
 
-def load_setting_file(file_path):
-    """ [FUNCTIONS] INI形式の設定ファイルを読み込んでConfigParserオブジェクト化し,
-    必須パラメタ有無のチェック, 値の範囲チェックを実施し, ConfigParserオブジェクトを返す.
-    必須パラメタ有無チェックおよび値の範囲チェックに問題がある場合は、
-    ValueErrorをraiseする.
-
-    Keyword arguments:
-    file_path -- 設定ファイル(INI形式)パス(絶対パス, あるいはコマンド実行場所からの相対パス)
-
-    Return value: 設定値(ConfigParserオブジェクト)
+class ItWillRainSoon:
+    """ [CLASS] YOLP(気象情報)を利用して雨が降るかどうかをチェックするクラス.
     """
 
-    if not os.path.exists(file_path):
-        raise OSError
+    def __init__(self):
+        """ [FUNCTIONS] コンストラクタ.
+        """
+        self.abspath = os.path.abspath(os.path.dirname(__file__))
+        logging.config.fileConfig(os.path.join(self.abspath, "logging.conf"))
+        self.logger = logging.getLogger()
 
-    inifile = configparser.SafeConfigParser()
-    inifile.read(file_path)
+    def start(self, setting_file_path):
+        """ [FUNCTIONS]
+        """
+        # 設定ファイル読み込み
+        settings = self.load_setting_file(setting_file_path)
 
-    download_dir = inifile.get('yolp', 'download_dir')
-    if not (os.access(download_dir, os.W_OK)):
-        raise ValueError
+        # YOLP(気象情報呼び出し)
+        weather_json = self.get_weather_information(settings)
 
-    return inifile
+        # 気象情報解析
+        self.parse_weather_information(weather_json, settings)
 
+    def load_setting_file(self, file_path):
+        """ [FUNCTIONS] INI形式の設定ファイルを読み込んでConfigParserオブジェクト化し,
+        必須パラメタ有無のチェック, 値の範囲チェックを実施し, ConfigParserオブジェクトを返す.
+        必須パラメタ有無チェックおよび値の範囲チェックに問題がある場合は、
+        ValueErrorをraiseする.
 
-def get_weather_information(settings):
-    """ [FUNCTIONS] YOLP(気象情報)から気象情報をJSON形式で取得し返す.
-    取得したJSONは指定ディレクトリ(設定ファイル)に保存する.
+        Keyword arguments:
+        file_path -- 設定ファイル(INI形式)パス(絶対パス, あるいはコマンド実行場所からの相対パス)
 
-    Keyword arguments:
-    settings -- 設定値(ConfigParserオブジェクト)
+        Return value: 設定値(ConfigParserオブジェクト)
+        """
 
-    Return value: YOLP(気象情報)から取得したJSONデータ
-    """
+        self.logger.info(
+            "Start load_setting_file. (file_path={})".format(file_path))
 
-    appid = settings.get('yolp', 'appid')
-    coordinates = settings.get('yolp', 'coordinates')
-    date_now = datetime.now().strftime('%Y%m%d%H%M')
+        if not os.path.exists(file_path):
+            self.logger.fatal(
+                "file_path is not found. (file_path={})".format(file_path))
+            raise OSError
 
-    url = \
-        "https://map.yahooapis.jp/weather/V1/place?" \
-        "appid={appid}&" \
-        "coordinates={coordinates}&" \
-        "output=json&" \
-        "date_now={date_now}&" \
-        "past=0&" \
-        "interval=10".format(
-            appid=appid, coordinates=coordinates, date_now=date_now)
+        self.logger.info(
+            "Start inifile.read.(file_path={})".format(file_path))
+        inifile = configparser.SafeConfigParser()
+        inifile.read(file_path)
+        self.logger.info("Finished inifile.read.")
 
-    weather_json = requests.get(url).json()
+        self.logger.info(
+            "Finished load_setting_file.(file_path={})".format(file_path))
+        return inifile
 
-    output_json_file = open(
-        settings.get('yolp', 'download_dir') + "/%s.json" % date_now, 'w')
-    json.dump(
-        weather_json,
-        output_json_file,
-        indent=4, separators=(',', ': '), ensure_ascii=False)
+    def get_weather_information(self, settings):
+        """ [FUNCTIONS] YOLP(気象情報)から気象情報をJSON形式で取得し返す.
+        取得したJSONは指定ディレクトリ(設定ファイル)に保存する.
 
-    output_json_file.close
+        Keyword arguments:
+        settings -- 設定値(ConfigParserオブジェクト)
 
-    return weather_json
+        Return value: YOLP(気象情報)から取得したJSONデータ
+        """
+        self.logger.info("Start get_weather_information.")
 
+        appid = settings.get('yolp', 'appid')
+        coordinates = settings.get('yolp', 'coordinates')
+        date_now = datetime.now().strftime('%Y%m%d%H%M')
 
-def parse_weather_information(weather_information_json, settings):
-    """ [FUNCTIONS] YOLP(気象情報)のデータ(JSON形式)を解析し、降水強度をチェックする.
-    指定時間後の降水強度が0.0を超える場合, 指定のメッセージ(設定ファイル)を発話する.
+        url = \
+            "https://map.yahooapis.jp/weather/V1/place?" \
+            "appid={appid}&" \
+            "coordinates={coordinates}&" \
+            "output=json&" \
+            "date_now={date_now}&" \
+            "past=0&" \
+            "interval=10".format(
+                appid=appid, coordinates=coordinates, date_now=date_now)
 
-    Keywork arguments:
-    weather_information_json -- YOLP(気象情報)のデータ(辞書オブジェクト)
-    settings -- 設定値(ConfigParserオブジェクト)
-    """
-    message = settings.get('audio', 'message')
-    repeat = int(settings.get('audio', 'repeat'))
-    weather_list = \
-        weather_information_json["Feature"][0]["Property"]["WeatherList"]
+        self.logger.info("Start HTTP GET request.(url={})".format(url))
+        weather_json = requests.get(url).json()
+        self.logger.info(
+            "Finished HTTP GET request.(res={})".format(
+                json.dumps(
+                    weather_json,
+                    indent=4, separators=(',', ': '), ensure_ascii=False)))
 
-    for weather in weather_list["Weather"]:
-        if float(weather["Rainfall"]) > 0.0:
-            if os.access('./.raining', os.F_OK):
-                # print("It is raining now.")
-                return 2
-            else:
-                # playback sound.
-                # print("{}\n".format(message))
-                for var in range(0, repeat):
-                    os.system(
-                        '/opt/aquestalkpi/AquesTalkPi -b "{}" | aplay'.format(
-                            message))
-                    time.sleep(5)
+        self.logger.info("Finished get_weather_information.")
 
-                open('./.raining', 'w').close()
-                return 1
-            break
+        return weather_json
 
-    # print("Not Rainfall")
-    # os.system('/opt/aquestalkpi/AquesTalkPi "この先、しばらく雨は降らないよ" | aplay')
+    def parse_weather_information(self, weather_information_json, settings):
+        """ [FUNCTIONS] YOLP(気象情報)のデータ(JSON形式)を解析し、降水強度をチェックする.
+        指定時間後の降水強度が0.0を超える場合, 指定のメッセージ(設定ファイル)を発話する.
 
-    if os.access('./.raining', os.F_OK):
-        os.remove('./.raining')
+        Keywork arguments:
+        weather_information_json -- YOLP(気象情報)のデータ(辞書オブジェクト)
+        settings -- 設定値(ConfigParserオブジェクト)
+        """
+        self.logger.info("Start parse_weather_information.")
 
-    return 0
+        message = settings.get('audio', 'message')
+        repeat = int(settings.get('audio', 'repeat'))
+        weather_list = \
+            weather_information_json["Feature"][0]["Property"]["WeatherList"]
+
+        self.logger.info("Check rainfall larger than 0.0...")
+        for weather in weather_list["Weather"]:
+            if float(weather["Rainfall"]) > 0.0:
+                self.logger.info(
+                    "Found rainfall(>0.0).(weather={})".format(weather))
+                if os.access(os.path.join(self.abspath, '.raining'),
+                   os.F_OK):
+                    self.logger.info("Exist {}. It is raining.".format(
+                        os.path.join(self.abspath, '.raining')
+                    ))
+                    return 2
+                else:
+                    self.logger.info("It will rain soon!")
+                    cmd = '/opt/aquestalkpi/AquesTalkPi -b {}|aplay'.format(
+                        message)
+                    for var in range(0, repeat):
+                        self.logger.info(
+                            "Exec command.(cmd={}, repeat={}, now={})".format(
+                                cmd, repeat, var+1
+                            ))
+                        os.system(cmd)
+                        time.sleep(5)
+
+                    self.logger.info("Make {}.".format(
+                            os.path.join(self.abspath, '.raining')
+                    ))
+                    open(os.path.join(self.abspath, '.raining'), 'w').close()
+                    return 1
+                break
+
+        self.logger.info("It won't rain.")
+
+        if os.access(os.path.join(self.abspath, '.raining'), os.F_OK):
+            self.logger.info("Remove {}.".format(
+                    os.path.join(self.abspath, '.raining')
+            ))
+            os.remove(os.path.join(self.abspath, '.raining'))
+
+        self.logger.info("Finished parse_weather_information.")
+        return 0
 
 
 if __name__ == '__main__':
@@ -137,11 +183,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # 設定ファイル読み込み
-    settings = load_setting_file(args.conf)
-
-    # YOLP(気象情報呼び出し)
-    weather_json = get_weather_information(settings)
-
-    # 気象情報解析
-    parse_weather_information(weather_json, settings)
+    iwrs = ItWillRainSoon()
+    iwrs.start(args.conf)
