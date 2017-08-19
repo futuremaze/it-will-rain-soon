@@ -133,7 +133,7 @@ class ItWillRainSoon:
                     "Found rainfall(>0.0).(weather={})".format(weather))
                 if os.access(os.path.join(self.abspath, '.raining'),
                    os.F_OK):
-                    self.logger.info("Exist {}. It is raining.".format(
+                    self.logger.info("Exist {}. It is raining now.".format(
                         os.path.join(self.abspath, '.raining')
                     ))
                     return 2
